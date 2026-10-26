@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Quest: C++ Hero</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Press+Start+2P&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        pixel: ['"Press Start 2P"', 'cursive'],
+                        code: ['"Fira Code"', 'monospace'],
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        cyber: {
+                            bg: '#0f172a',
+                            panel: '#1e293b',
+                            border: '#334155',
+                            accent: '#3b82f6',
+                            cpp: '#00599C',
+                            gold: '#fbbf24',
+                            danger: '#ef4444',
+                            success: '#10b981'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #f8fafc;
+            user-select: none;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        /* Code Editor Styling */
+        .code-input {
+            background: #090d16;
+            border: 1px solid #3b82f6;
+            color: #60a5fa;
+            font-family: 'Fira Code', monospace;
+            padding: 2px 8px;
+            border-radius: 4px;
+            outline: none;
+            display: inline-block;
+            min-width: 80px;
+        }
+        .code-input:focus {
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+        .draggable-block {
+            cursor: grab;
+            transition: all 0.2s;
+        }
+        .draggable-block:active {
+            cursor: grabbing;
+        }
+        .drop-zone {
+            min-height: 42px;
+            border: 2px dashed #475569;
+            transition: border-color 0.2s;
+        }
+        .drop-zone.hover {
+            border-color: #3b82f6;
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+        /* Glowing Effects */
+        .glow-blue {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+        }
+        .glow-gold {
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.3);
+        }
+        /* Scanline Overlay for Cyber-Retro Feel */
+        .scanlines {
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%, 
+                rgba(0, 0, 0, 0.25) 50%
+            ), linear-gradient(
+                90deg,
+                rgba(255, 0, 0, 0.03),
+                rgba(0, 255, 0, 0.01),
+                rgba(0, 0, 255, 0.03)
+            );
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="font-sans antialiased min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <!-- TOP HEADER / STATS BAR -->
+    <header class="bg-slate-900 border-b border-slate-800 p-3 sticky top-0 z-40 shadow-xl">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+            
+            <!-- Game Title -->
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 text-white font-pixel p-2 rounded-lg text-sm border-2 border-blue-400 flex items-center justify-center">
+                    C++
+                </div>
+                <div>
+                    <h1 class="font-pixel text-base sm:text-lg text-blue-400 tracking-wider">CODE QUEST</h1>
+                    <p class="text-xs text-slate-400 font-code">Маг Сиплюс и Подземелье Ошибок</p>
+                </div>
+            </div>
+
+            <!-- Player Stats Header -->
+            <div class="flex items-center gap-6 bg-slate-950 px-4 py-2 rounded-xl border border-slate-800 text-xs sm:text-sm">
+                <!-- HP Bar -->
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-heart text-red-500 text-base"></i>
+                    <div class="w-24 sm:w-32 bg-slate-800 rounded-full h-3 overflow-hidden border border-slate-700">
+                        <div id="hp-bar" class="bg-gradient-to-r from-red-600 to-red-400 h-full w-full transition-all duration-300"></div>
+                    </div>
+                    <span id="hp-text" class="font-code font-bold">100/100</span>
+                </div>
+
+                <!-- Mana / XP Bar -->
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-bolt text-amber-400 text-base"></i>
+                    <div class="w-20 sm:w-28 bg-slate-800 rounded-full h-3 overflow-hidden border border-slate-700">
+                        <div id="mana-bar" class="bg-gradient-to-r from-amber-500 to-yellow-300 h-full w-0 transition-all duration-300"></div>
+                    </div>
+                    <span id="mana-text" class="font-code font-bold">0/100 XP</span>
+                </div>
+
+                <!-- Stage / Level -->
+                <div class="flex items-center gap-2 text-cyan-400">
+                    <i class="fa-solid fa-dungeon text-base"></i>
+                    <span class="font-pixel text-xs">Уровень <span id="stage-num">1</span>/8</span>
+                </div>
+            </div>
+
+            <!-- Header Controls -->
+            <div class="flex items-center gap-2">
+                <a href="index.html" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-cyan-300 font-semibold rounded-lg border border-slate-700 transition flex items-center gap-2 text-xs" title="Вернуться на главную">
+                    <i class="fa-solid fa-house"></i>
+                    <span class="hidden sm:inline">Главное меню</span>
+                </a>
+                <button id="sound-btn" onclick="toggleSound()" class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition" title="Звук">
+                    <i id="sound-icon" class="fa-solid fa-volume-high"></i>
+                </button>
+                <button onclick="openSpellbook()" class="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg border border-blue-400 transition flex items-center gap-2 text-xs sm:text-sm">
+                    <i class="fa-solid fa-book-bookmark"></i>
+                    <span>Справочник</span>
+                </button>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- MAIN GAME WORKSPACE -->
+    <main class="max-w-7xl mx-auto w-full p-4 flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- LEFT COLUMN: ANIMATED CANVAS & ENEMY INFO (5 cols) -->
+        <section class="lg:col-span-5 flex flex-col gap-4">
+            
+            <!-- Canvas Container -->
+            <div class="relative bg-slate-950 rounded-2xl border-2 border-slate-800 overflow-hidden shadow-2xl group">
+                <div class="scanlines absolute inset-0 z-10"></div>
+                
+                <!-- Stage Header Overlay -->
+                <div class="absolute top-3 left-3 z-20 bg-slate-900/80 backdrop-blur-sm px-3 py-1 rounded-lg border border-slate-700">
+                    <span id="enemy-name" class="font-pixel text-xs text-amber-400">Гоблин Синтаксиса</span>
+                </div>
+
+                <!-- Canvas Component -->
+                <canvas id="gameCanvas" class="w-full h-64 sm:h-80 block"></canvas>
+
+                <!-- Floating Combat Output / Effect Display -->
+                <div id="combat-log" class="absolute bottom-2 left-2 right-2 z-20 bg-slate-900/90 border border-slate-800 rounded-lg p-2 text-xs font-code text-slate-300 max-h-20 overflow-y-auto">
+                    <span class="text-blue-400">[Система]:</span> Вы вошли в комнату подземелья. Враг блокирует путь!
+                </div>
+            </div>
+
+            <!-- Enemy Health & Description -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col gap-2">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs uppercase font-bold text-slate-400 tracking-wider">Здоровье Врага</span>
+                    <span id="enemy-hp-text" class="font-code text-xs font-bold text-red-400">50/50 HP</span>
+                </div>
+                <div class="w-full bg-slate-950 rounded-full h-3 border border-slate-800 overflow-hidden">
+                    <div id="enemy-hp-bar" class="bg-gradient-to-r from-red-600 to-rose-500 h-full w-full transition-all duration-300"></div>
+                </div>
+                <p id="enemy-desc" class="text-xs text-slate-400 mt-1">
+                    Маленький вредный монстр. Искажает вывод std::cout!
+                </p>
+            </div>
+
+            <!-- Compiler Spirit Advice Box -->
+            <div id="compiler-spirit" class="bg-gradient-to-r from-blue-950/60 to-indigo-950/60 border border-blue-800/50 rounded-xl p-4 flex items-start gap-3 relative overflow-hidden">
+                <div class="p-2 bg-blue-600/20 text-blue-400 rounded-lg text-2xl">
+                    <i class="fa-solid fa-ghost"></i>
+                </div>
+                <div class="flex-grow">
+                    <h4 class="text-xs font-bold text-blue-300 uppercase tracking-wider mb-1">Дух Компилятора</h4>
+                    <p id="spirit-hint" class="text-xs text-slate-300 leading-relaxed">
+                        "Приветствую, молодой C++ Герой! Внимательно читай задание. Любая пропущенная точка с запятой `;` может стоить тебе жизни!"
+                    </p>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- RIGHT COLUMN: CODE CHALLENGE & INTERACTION (7 cols) -->
+        <section class="lg:col-span-7 flex flex-col gap-4">
+            
+            <!-- Task Card -->
+            <div class="bg-slate-900 rounded-2xl border-2 border-slate-800 p-5 shadow-xl flex flex-col gap-4">
+                
+                <!-- Task Header & Type Badge -->
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                    <div class="flex items-center gap-2">
+                        <span id="task-badge" class="px-2.5 py-1 bg-blue-500/20 text-blue-400 border border-blue-500/30 text-xs font-semibold rounded-md uppercase">
+                            Заполнение Пропусков
+                        </span>
+                        <h2 id="task-title" class="font-bold text-base text-slate-100">Вывод сообщения в консоль</h2>
+                    </div>
+                    <span id="task-difficulty" class="text-xs font-code text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded">Легко</span>
+                </div>
+
+                <!-- Task Description / Instructions -->
+                <div id="task-instruction" class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                    Дополните код, чтобы вывести строку <code class="bg-slate-800 text-amber-300 px-1.5 py-0.5 rounded font-code">"Hello World!"</code> в стандартный поток вывода C++.
+                </div>
+
+                <!-- CODE EDITOR / INTERACTIVE AREA -->
+                <div class="bg-slate-950 rounded-xl border border-slate-800 p-4 font-code text-sm sm:text-base relative overflow-x-auto shadow-inner">
+                    <div class="text-xs text-slate-500 mb-2 flex justify-between select-none">
+                        <span>// C++ Editor - main.cpp</span>
+                        <span>C++17</span>
+                    </div>
+
+                    <!-- Dynamic Task Input Area -->
+                    <div id="code-container" class="space-y-2 text-slate-200 leading-loose">
+                        <!-- Content inserted dynamically by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Drag Options Pool (Visible only in Drag-and-Drop Tasks) -->
+                <div id="drag-pool" class="hidden bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+                    <p class="text-xs text-slate-400 mb-2 font-semibold">Перетащите или нажмите на блоки, чтобы вставить их:</p>
+                    <div id="drag-items" class="flex flex-wrap gap-2">
+                        <!-- Draggable code blocks injected here -->
+                    </div>
+                </div>
+
+                <!-- Action Controls / Buttons -->
+                <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+                    <button onclick="resetCurrentTask()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs sm:text-sm rounded-xl border border-slate-700 transition flex items-center gap-2">
+                        <i class="fa-solid fa-rotate-right"></i>
+                        <span>Сбросить</span>
+                    </button>
+
+                    <button id="cast-spell-btn" onclick="checkAnswer()" class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm rounded-xl border border-blue-400/30 transition shadow-lg glow-blue flex items-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span>Применить Заклинание (Запуск)</span>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Execution Terminal Output Window -->
+            <div class="bg-slate-950 rounded-xl border border-slate-800 p-4 font-code text-xs">
+                <div class="flex items-center justify-between text-slate-500 border-b border-slate-800/80 pb-2 mb-2">
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-terminal text-green-500"></i> Вывод компилятора:
+                    </span>
+                    <span id="compiler-status" class="text-slate-400">Готов к сборке</span>
+                </div>
+                <div id="terminal-out" class="text-slate-300 min-h-[60px] whitespace-pre-wrap">
+                    > Нажмите "Применить Заклинание", чтобы скомпилировать и проверить код...
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-slate-950 border-t border-slate-800 py-3 text-center text-xs text-slate-500">
+        <p>Code Quest: C++ Hero — Интерактивный тренажер программирования на C++. Создано для начинающих программистов.</p>
+    </footer>
+
+    <!-- MODAL: SPELLBOOK / C++ CHEAT SHEET -->
+    <div id="spellbook-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border-2 border-slate-700 rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            
+            <!-- Modal Header -->
+            <div class="p-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-book-bookmark text-blue-400 text-xl"></i>
+                    <h3 class="font-pixel text-sm sm:text-base text-amber-400">Справочник Мага C++</h3>
+                </div>
+                <button onclick="closeSpellbook()" class="text-slate-400 hover:text-white p-2 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body (Scrollable C++ Reference) -->
+            <div class="p-6 overflow-y-auto space-y-6 text-sm text-slate-300 font-sans">
+                
+                <!-- Section 1 -->
+                <div>
+                    <h4 class="font-bold text-blue-400 text-base mb-2 font-code">1. Вывод данных (std::cout)</h4>
+                    <p class="text-xs text-slate-400 mb-2">Используется для вывода текста или переменных в консоль. Требует библиотеки <code class="text-amber-300">&lt;iostream&gt;</code>.</p>
+                    <pre class="bg-slate-950 p-3 rounded-lg text-xs font-code border border-slate-800 text-green-400">#include &lt;iostream&gt;
+
+std::cout &lt;&lt; "Привет, Мир!" &lt;&lt; std::endl; // std::endl делает перенос строки</pre>
+                </div>
+
+                <!-- Section 2 -->
+                <div>
+                    <h4 class="font-bold text-blue-400 text-base mb-2 font-code">2. Переменные и Типы Данных</h4>
+                    <ul class="list-disc list-inside text-xs text-slate-400 space-y-1 mb-2">
+                        <li><b class="text-slate-200">int</b> - целые числа (напр. <code class="text-amber-300">10, -5</code>)</li>
+                        <li><b class="text-slate-200">double</b> - числа с плавающей точкой (напр. <code class="text-amber-300">3.14, 0.5</code>)</li>
+                        <li><b class="text-slate-200">std::string</b> - строки текста (напр. <code class="text-amber-300">"Hero"</code>)</li>
+                        <li><b class="text-slate-200">bool</b> - логический тип (<code class="text-amber-300">true</code> или <code class="text-amber-300">false</code>)</li>
+                    </ul>
+                    <pre class="bg-slate-950 p-3 rounded-lg text-xs font-code border border-slate-800 text-green-400">int hp = 100;
+double mana = 50.5;
+std::string name = "Mage";
+bool isAlive = true;</pre>
+                </div>
+
+                <!-- Section 3 -->
+                <div>
+                    <h4 class="font-bold text-blue-400 text-base mb-2 font-code">3. Ввод данных (std::cin)</h4>
+                    <p class="text-xs text-slate-400 mb-2">Считывает значение с клавиатуры и записывает в переменную (использует стрелочки <code class="text-amber-300">&gt;&gt;</code>).</p>
+                    <pre class="bg-slate-950 p-3 rounded-lg text-xs font-code border border-slate-800 text-green-400">int age;
+std::cin &gt;&gt; age; // Ввод числа от пользователя</pre>
+                </div>
+
+                <!-- Section 4 -->
+                <div>
+                    <h4 class="font-bold text-blue-400 text-base mb-2 font-code">4. Условия (if / else)</h4>
+                    <pre class="bg-slate-950 p-3 rounded-lg text-xs font-code border border-slate-800 text-green-400">if (hp &gt; 0) {
+    std::cout &lt;&lt; "Герой жив!";
+} else {
+    std::cout &lt;&lt; "Герой повержен!";
+}</pre>
+                </div>
+
+                <!-- Section 5 -->
+                <div>
+                    <h4 class="font-bold text-blue-400 text-base mb-2 font-code">5. Циклы (for / while)</h4>
+                    <pre class="bg-slate-950 p-3 rounded-lg text-xs font-code border border-slate-800 text-green-400">// Цикл for исполняется определенное число раз
+for (int i = 0; i &lt; 3; i++) {
+    std::cout &lt;&lt; "Удар мечём №" &lt;&lt; i &lt;&lt; std::endl;
+}</pre>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 bg-slate-950 border-t border-slate-800 text-right">
+                <button onclick="closeSpellbook()" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: GAME OVER / VICTORY -->
+    <div id="endgame-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border-2 border-slate-700 rounded-2xl max-w-md w-full p-6 text-center shadow-2xl flex flex-col items-center gap-4">
+            <div id="endgame-icon-box" class="w-20 h-20 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-4xl border border-amber-500/40">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <h2 id="endgame-title" class="font-pixel text-xl text-amber-400">ПОБЕДА!</h2>
+            <p id="endgame-desc" class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                Вы успешно одолели Босса "Segmentation Fault" и очистили Подземелье Синтаксиса! Теперь вы владеете базовыми заклинаниями C++.
+            </p>
+            <button onclick="restartGame()" class="mt-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl border border-blue-400/40 text-xs sm:text-sm transition shadow-lg glow-blue">
+                Начать Новую Игру
+            </button>
+            <a href="index.html" class="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold rounded-xl border border-slate-600 text-xs sm:text-sm transition">
+                Вернуться в меню
+            </a>
+        </div>
+    </div>
+
+    <!-- GAME LOGIC & AUDIO ENGINE SCRIPT -->
+    <script>
+        /* ==========================================================================
+           1. AUDIO ENGINE (Web Audio API Synthesizer - No External Files)
+           ========================================================================== */
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            }
+
+            playTone(freq, type, duration, vol = 0.1) {
+                if (!this.enabled) return;
+                this.init();
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e) {}
+            }
+
+            playCastSpell() {
+                this.playTone(440, 'sine', 0.1, 0.15);
+                setTimeout(() => this.playTone(880, 'triangle', 0.2, 0.15), 80);
+            }
+
+            playHit() {
+                this.playTone(150, 'sawtooth', 0.15, 0.2);
+            }
+
+            playError() {
+                this.playTone(120, 'square', 0.25, 0.2);
+                setTimeout(() => this.playTone(90, 'square', 0.25, 0.2), 150);
+            }
+
+            playVictory() {
+                const notes = [261, 329, 392, 523];
+                notes.forEach((freq, i) => {
+                    setTimeout(() => this.playTone(freq, 'sine', 0.25, 0.15), i * 120);
+                });
+            }
+        }
+
+        const audio = new SoundEngine();
+
+        function toggleSound() {
+            audio.enabled = !audio.enabled;
+            const icon = document.getElementById('sound-icon');
+            if (audio.enabled) {
+                icon.className = 'fa-solid fa-volume-high';
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark text-red-400';
+            }
+        }
+
+        /* ==========================================================================
+           2. GAME CURRICULUM & TASKS DATA
+           ========================================================================== */
+        const TASKS = [
+            {
+                id: 1,
+                title: "Приветствие Мага",
+                enemyName: "Гоблин-Синтаксис",
+                enemyHp: 30,
+                difficulty: "Легко",
+                type: "fill", // fill in the blank
+                instruction: "Напечатайте 'Hello C++' в консоль. Заполните пропущенный оператор вывода C++.",
+                template: [
+                    { type: "text", val: "#include <iostream>\n\nint main() {\n    std::" },
+                    { type: "input", id: "blank1", answer: "cout", placeholder: "???" },
+                    { type: "text", val: " << \"Hello C++\" << std::endl;\n    return 0;\n}" }
+                ],
+                hint: "Для вывода данных в C++ используется команду `std::cout` (Character Output).",
+                enemyType: "goblin"
+            },
+            {
+                id: 2,
+                title: "Точка с Запятой!",
+                enemyName: "Баг Точки с Запятой",
+                enemyHp: 40,
+                difficulty: "Легко",
+                type: "bugfix",
+                instruction: "В коде ниже допущена критическая синтаксическая ошибка. Найдите и исправьте её!",
+                template: [
+                    { type: "text", val: "#include <iostream>\n\nint main() {\n    int playerHp = 100\n    std::cout << playerHp;\n    return 0;\n}" }
+                ],
+                correctCode: "#include <iostream>\n\nint main() {\n    int playerHp = 100;\n    std::cout << playerHp;\n    return 0;\n}",
+                hint: "Каждая инструкция/команда в C++ должна завершаться точкой с запятой `;`!",
+                enemyType: "bug"
+            },
+            {
+                id: 3,
+                title: "Целочисленные Переменные",
+                enemyName: "Слайм Ошибок Типов",
+                enemyHp: 45,
+                difficulty: "Легко",
+                type: "fill",
+                instruction: "Объявите целочисленную переменную `damage` и присвойте ей значение 25.",
+                template: [
+                    { type: "text", val: "#include <iostream>\n\nint main() {\n    " },
+                    { type: "input", id: "blank1", answer: "int", placeholder: "тип" },
+                    { type: "text", val: " damage = " },
+                    { type: "input", id: "blank2", answer: "25", placeholder: "число" },
+                    { type: "text", val: ";\n    std::cout << damage;\n    return 0;\n}" }
+                ],
+                hint: "Тип данных `int` используется для хранения целых чисел без десятичной части.",
+                enemyType: "slime"
+            },
+            {
+                id: 4,
+                title: "Сборка Заклинания Ввода",
+                enemyName: "Темный Маг 'cin'",
+                enemyHp: 60,
+                difficulty: "Средне",
+                type: "drag",
+                instruction: "Соберите правильный порядок строки для считывания значения переменной `mana` с клавиатуры.",
+                dragBlocks: ["std::cin", ">>", "mana", ";"],
+                correctOrder: ["std::cin", ">>", "mana", ";"],
+                hint: "Оператор `std::cin` использует стрелки `>>` для записи данных в переменную.",
+                enemyType: "wizard"
+            },
+            {
+                id: 5,
+                title: "Проверка Условия (if)",
+                enemyName: "Страж Логики",
+                enemyHp: 70,
+                difficulty: "Средне",
+                type: "fill",
+                instruction: "Дополните условный оператор `if`, чтобы проверить, превышает ли `power` значение 50.",
+                template: [
+                    { type: "text", val: "int power = 75;\nif (power " },
+                    { type: "input", id: "blank1", answer: ">", placeholder: "знак" },
+                    { type: "text", val: " 50) {\n    std::cout << \"Мощный удар!\";\n}" }
+                ],
+                hint: "Используйте знак больше `>` для сравнения двух чисел в операторе `if`.",
+                enemyType: "knight"
+            },
+            {
+                id: 6,
+                title: "Цикл Атаки (for)",
+                enemyName: "Зацикленный Демон",
+                enemyHp: 80,
+                difficulty: "Средне",
+                type: "fill",
+                instruction: "Создайте цикл `for`, который повторится 3 раза (от i = 0 до i < 3).",
+                template: [
+                    { type: "text", val: "for (int i = 0; " },
+                    { type: "input", id: "blank1", answer: "i < 3", placeholder: "условие" },
+                    { type: "text", val: "; i++) {\n    std::cout << \"Удар! \";\n}" }
+                ],
+                hint: "Условие продолжения цикла `for`: пока `i < 3`, цикл выполняется.",
+                enemyType: "demon"
+            },
+            {
+                id: 7,
+                title: "Строки и Вывод",
+                enemyName: "Крушитель Памяти",
+                enemyHp: 90,
+                difficulty: "Сложно",
+                type: "fill",
+                instruction: "Укажите верный тип данных для текстовой переменной `spellName`.",
+                template: [
+                    { type: "text", val: "#include <iostream>\n#include <string>\n\nint main() {\n    " },
+                    { type: "input", id: "blank1", answer: "std::string", placeholder: "тип строки" },
+                    { type: "text", val: " spellName = \"Fireball\";\n    std::cout << spellName;\n}" }
+                ],
+                hint: "Для работы с текстом в C++ используется тип `std::string` из заголовочного файла `<string>`.",
+                enemyType: "golem"
+            },
+            {
+                id: 8,
+                title: "Финальный Босс: Segmentation Fault!",
+                enemyName: "БОСС: SegFault & NullPointer",
+                enemyHp: 120,
+                difficulty: "БОСС",
+                type: "drag",
+                instruction: "Соберите полный рабочую функцию `attack()` для победы над Боссом Компилятора!",
+                dragBlocks: ["int damage = 100;", "return damage;", "int attack() {", "}"],
+                correctOrder: ["int attack() {", "int damage = 100;", "return damage;", "}"],
+                hint: "Функция должна сначала объявляться, затем выполнять действия и возвращать значение через `return`.",
+                enemyType: "boss"
+            }
+        ];
+
+        /* ==========================================================================
+           3. GAME STATE & VARIABLES
+           ========================================================================== */
+        let gameState = {
+            stage: 0,
+            playerHp: 100,
+            maxPlayerHp: 100,
+            playerMana: 0,
+            enemyHp: 50,
+            maxEnemyHp: 50,
+            dragSequence: []
+        };
+
+        /* ==========================================================================
+           4. CANVAS ANIMATION & VISUAL SYSTEM
+           ========================================================================== */
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Animation Particles & Status
+        let particles = [];
+        let animFrameId = null;
+        let heroAnimState = { x: 60, y: 160, frame: 0, attacking: false };
+        let enemyAnimState = { x: 260, y: 160, frame: 0, hit: false };
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight || 280;
+            heroAnimState.y = canvas.height / 2 + 10;
+            enemyAnimState.y = canvas.height / 2 + 10;
+            enemyAnimState.x = canvas.width - 90;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        // Particle Class for Magic Spells
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 6 + 3;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.radius = Math.random() * 4 + 2;
+                this.color = color;
+                this.life = 1;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= 0.03;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.life);
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 8;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function createMagicParticles(x, y, color) {
+            for (let i = 0; i < 25; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+        }
+
+        // Draw Player Hero (Wizard / C++ Mage)
+        function drawHero(x, y) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            // Floating Hover Effect
+            const floatOffset = Math.sin(Date.now() / 250) * 4;
+            ctx.translate(0, floatOffset);
+
+            // Mage Robe
+            ctx.fillStyle = '#1e40af';
+            ctx.beginPath();
+            ctx.moveTo(-15, 20);
+            ctx.lineTo(0, -25);
+            ctx.lineTo(15, 20);
+            ctx.fill();
+
+            // Mage Hat
+            ctx.fillStyle = '#2563eb';
+            ctx.beginPath();
+            ctx.moveTo(-20, -22);
+            ctx.lineTo(20, -22);
+            ctx.lineTo(0, -50);
+            ctx.fill();
+
+            // Hat Rim Accent
+            ctx.fillStyle = '#fbbf24';
+            ctx.fillRect(-18, -24, 36, 4);
+
+            // Head / Face
+            ctx.fillStyle = '#fde047';
+            ctx.beginPath();
+            ctx.arc(0, -15, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Magic Staff
+            ctx.strokeStyle = '#78350f';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(15, 15);
+            ctx.lineTo(22, -30);
+            ctx.stroke();
+
+            // Staff Orb Glowing
+            ctx.fillStyle = '#60a5fa';
+            ctx.shadowColor = '#3b82f6';
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.arc(22, -32, 7, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // Draw Monsters based on Type
+        function drawEnemy(x, y, type) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            if (enemyAnimState.hit) {
+                ctx.translate((Math.random() - 0.5) * 8, (Math.random() - 0.5) * 8);
+            }
+
+            const floatOffset = Math.cos(Date.now() / 200) * 3;
+            ctx.translate(0, floatOffset);
+
+            if (type === 'boss') {
+                // Large Compiler Boss
+                ctx.fillStyle = '#dc2626';
+                ctx.shadowColor = '#ef4444';
+                ctx.shadowBlur = 15;
+                ctx.beginPath();
+                ctx.arc(0, -10, 35, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Eyes
+                ctx.fillStyle = '#fef08a';
+                ctx.fillRect(-15, -20, 8, 8);
+                ctx.fillRect(7, -20, 8, 8);
+                ctx.fillStyle = '#000';
+                ctx.fillRect(-12, -18, 4, 4);
+                ctx.fillRect(9, -18, 4, 4);
+
+                // Crown / Horns
+                ctx.fillStyle = '#78716c';
+                ctx.beginPath();
+                ctx.moveTo(-25, -40);
+                ctx.lineTo(-10, -60);
+                ctx.lineTo(0, -42);
+                ctx.lineTo(10, -60);
+                ctx.lineTo(25, -40);
+                ctx.fill();
+            } else if (type === 'bug') {
+                // Syntax Bug
+                ctx.fillStyle = '#16a34a';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 20, 15, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Bug Legs
+                ctx.strokeStyle = '#15803d';
+                ctx.lineWidth = 3;
+                for(let i = -15; i <= 15; i += 10) {
+                    ctx.beginPath();
+                    ctx.moveTo(i, 0);
+                    ctx.lineTo(i * 1.3, 18);
+                    ctx.stroke();
+                }
+            } else {
+                // Default Goblin / Monster
+                ctx.fillStyle = '#059669';
+                ctx.beginPath();
+                ctx.arc(0, -5, 20, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Ears
+                ctx.beginPath();
+                ctx.moveTo(-15, -15);
+                ctx.lineTo(-30, -25);
+                ctx.lineTo(-15, -5);
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(15, -15);
+                ctx.lineTo(30, -25);
+                ctx.lineTo(15, -5);
+                ctx.fill();
+
+                // Eyes
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(-7, -8, 4, 0, Math.PI * 2);
+                ctx.arc(7, -8, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        // Render Background Dungeon Scene
+        function drawDungeon() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Grid / Floor lines
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            const floorY = canvas.height / 2 + 30;
+
+            ctx.beginPath();
+            ctx.moveTo(0, floorY);
+            ctx.lineTo(canvas.width, floorY);
+            ctx.stroke();
+
+            // Subtle background glow
+            const gradient = ctx.createRadialGradient(
+                canvas.width / 2, canvas.height / 2, 20,
+                canvas.width / 2, canvas.height / 2, canvas.width / 1.5
+            );
+            gradient.addColorStop(0, 'rgba(30, 58, 138, 0.2)');
+            gradient.addColorStop(1, 'rgba(15, 23, 42, 0)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Main Animation Loop
+        function animate() {
+            drawDungeon();
+
+            // Update & Render Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw(ctx);
+                if (particles[i].life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+
+            // Draw Hero & Enemy
+            drawHero(heroAnimState.x, heroAnimState.y);
+            const currentTask = TASKS[gameState.stage];
+            drawEnemy(enemyAnimState.x, enemyAnimState.y, currentTask ? currentTask.enemyType : 'goblin');
+
+            animFrameId = requestAnimationFrame(animate);
+        }
+
+        /* ==========================================================================
+           5. GAME MECHANICS & TASK MANAGER
+           ========================================================================== */
+        
+        function initGame() {
+            resizeCanvas();
+            loadTask(0);
+            animate();
+        }
+
+        function loadTask(stageIndex) {
+            if (stageIndex >= TASKS.length) {
+                showVictory();
+                return;
+            }
+
+            gameState.stage = stageIndex;
+            const task = TASKS[stageIndex];
+
+            // Reset Enemy HP
+            gameState.enemyHp = task.enemyHp;
+            gameState.maxEnemyHp = task.enemyHp;
+
+            // UI Header updates
+            document.getElementById('stage-num').innerText = stageIndex + 1;
+            document.getElementById('enemy-name').innerText = task.enemyName;
+            document.getElementById('task-title').innerText = task.title;
+            document.getElementById('task-difficulty').innerText = task.difficulty;
+            document.getElementById('task-instruction').innerHTML = task.instruction;
+            document.getElementById('spirit-hint').innerText = `"${task.hint}"`;
+
+            // Badge styling
+            const badge = document.getElementById('task-badge');
+            if (task.type === 'fill') badge.innerText = "Заполнение Пропусков";
+            else if (task.type === 'bugfix') badge.innerText = "Исправление Ошибки";
+            else if (task.type === 'drag') badge.innerText = "Сборка Кода";
+
+            updateHpUI();
+
+            // Build Code Editor Container
+            const codeContainer = document.getElementById('code-container');
+            const dragPool = document.getElementById('drag-pool');
+            codeContainer.innerHTML = '';
+            dragPool.classList.add('hidden');
+            gameState.dragSequence = [];
+
+            if (task.type === 'fill') {
+                task.template.forEach(part => {
+                    if (part.type === 'text') {
+                        const span = document.createElement('span');
+                        span.innerText = part.val;
+                        span.className = "whitespace-pre-wrap";
+                        codeContainer.appendChild(span);
+                    } else if (part.type === 'input') {
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.id = part.id;
+                        input.placeholder = part.placeholder;
+                        input.className = 'code-input mx-1';
+                        input.autocomplete = 'off';
+                        codeContainer.appendChild(input);
+                    }
+                });
+            } else if (task.type === 'bugfix') {
+                const textarea = document.createElement('textarea');
+                textarea.id = 'bugfix-input';
+                textarea.rows = 6;
+                textarea.className = 'w-full bg-slate-900 border border-blue-500/50 text-blue-300 font-code p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm';
+                textarea.value = task.template[0].val;
+                codeContainer.appendChild(textarea);
+            } else if (task.type === 'drag') {
+                dragPool.classList.remove('hidden');
+                
+                // Dropzone inside Code Container
+                const dropZone = document.createElement('div');
+                dropZone.id = 'drop-zone';
+                dropZone.className = 'drop-zone rounded-lg p-3 flex flex-wrap gap-2 items-center bg-slate-900/50';
+                dropZone.innerHTML = '<span class="text-xs text-slate-500 select-none" id="drop-placeholder">Перетащите блоки сюда...</span>';
+                codeContainer.appendChild(dropZone);
+
+                // Render draggable blocks
+                const dragItems = document.getElementById('drag-items');
+                dragItems.innerHTML = '';
+
+                // Shuffle blocks
+                const shuffled = [...task.dragBlocks].sort(() => Math.random() - 0.5);
+                shuffled.forEach(blockText => {
+                    const block = document.createElement('div');
+                    block.className = 'draggable-block bg-blue-600/30 border border-blue-400 text-blue-200 px-3 py-1.5 rounded-lg font-code text-xs font-semibold shadow hover:bg-blue-600/50';
+                    block.innerText = blockText;
+                    block.onclick = () => addBlockToZone(blockText, block);
+                    dragItems.appendChild(block);
+                });
+            }
+
+            document.getElementById('terminal-out').innerText = '> Ожидание ввода команды...';
+            document.getElementById('compiler-status').innerText = 'Готов';
+            document.getElementById('compiler-status').className = 'text-slate-400';
+
+            logCombat(`[Комната ${stageIndex + 1}]: Появился ${task.enemyName}!`);
+        }
+
+        // Drag and drop helper
+        function addBlockToZone(text, element) {
+            const dropZone = document.getElementById('drop-zone');
+            const placeholder = document.getElementById('drop-placeholder');
+            if (placeholder) placeholder.style.display = 'none';
+
+            gameState.dragSequence.push(text);
+
+            const block = document.createElement('span');
+            block.className = 'bg-indigo-600 text-white px-2.5 py-1 rounded border border-indigo-400 font-code text-xs flex items-center gap-2 cursor-pointer hover:bg-red-600 transition';
+            block.innerHTML = `${text} <i class="fa-solid fa-xmark text-xs"></i>`;
+            
+            block.onclick = () => {
+                const index = gameState.dragSequence.indexOf(text);
+                if (index > -1) gameState.dragSequence.splice(index, 1);
+                block.remove();
+                element.style.opacity = '1';
+                element.style.pointerEvents = 'auto';
+                if (gameState.dragSequence.length === 0 && placeholder) {
+                    placeholder.style.display = 'inline';
+                }
+            };
+
+            dropZone.appendChild(block);
+            element.style.opacity = '0.3';
+            element.style.pointerEvents = 'none';
+            audio.playCastSpell();
+        }
+
+        // Check Answer Logic
+        function checkAnswer() {
+            const task = TASKS[gameState.stage];
+            let isCorrect = false;
+
+            if (task.type === 'fill') {
+                isCorrect = true;
+                task.template.forEach(part => {
+                    if (part.type === 'input') {
+                        const inputVal = document.getElementById(part.id).value.trim();
+                        if (inputVal !== part.answer) {
+                            isCorrect = false;
+                        }
+                    }
+                });
+            } else if (task.type === 'bugfix') {
+                const userVal = document.getElementById('bugfix-input').value.trim();
+                const normalizedUser = userVal.replace(/\s+/g, ' ');
+                const normalizedCorrect = task.correctCode.replace(/\s+/g, ' ');
+                isCorrect = (normalizedUser === normalizedCorrect);
+            } else if (task.type === 'drag') {
+                isCorrect = JSON.stringify(gameState.dragSequence) === JSON.stringify(task.correctOrder);
+            }
+
+            if (isCorrect) {
+                handleSuccess();
+            } else {
+                handleFailure();
+            }
+        }
+
+        function handleSuccess() {
+            audio.playCastSpell();
+            audio.playVictory();
+
+            // Trigger Spell Particle Effect
+            createMagicParticles(heroAnimState.x + 20, heroAnimState.y - 20, '#60a5fa');
+
+            // Enemy Damage Animation
+            enemyAnimState.hit = true;
+            setTimeout(() => enemyAnimState.hit = false, 400);
+
+            const damage = 50;
+            gameState.enemyHp = Math.max(0, gameState.enemyHp - damage);
+            gameState.playerMana = Math.min(100, gameState.playerMana + 25);
+
+            document.getElementById('terminal-out').innerText = `> Компиляция успешна! (0 ошибок, 0 предупреждений)\n> Результат: Заклинание C++ поразило врага!`;
+            document.getElementById('compiler-status').innerText = 'Успех (200 OK)';
+            document.getElementById('compiler-status').className = 'text-green-400 font-bold';
+
+            logCombat(`[Успех]: Код верный! Вы нанесли ${damage} урона врагу!`);
+            updateHpUI();
+
+            if (gameState.enemyHp <= 0) {
+                setTimeout(() => {
+                    logCombat(`[Победа]: Враг повержен! Переход в следующую комнату...`);
+                    loadTask(gameState.stage + 1);
+                }, 1200);
+            }
+        }
+
+        function handleFailure() {
+            audio.playError();
+
+            const damage = 20;
+            gameState.playerHp = Math.max(0, gameState.playerHp - damage);
+
+            document.getElementById('terminal-out').innerText = `> Ошибка компиляции! [FATAL ERROR]\n> Причина: Неверный синтаксис или порядок инструкций.\n> Проверьте подсказку Духа Компилятора.`;
+            document.getElementById('compiler-status').innerText = ' Ошибка сборки';
+            document.getElementById('compiler-status').className = 'text-red-400 font-bold';
+
+            logCombat(`[Ошибка]: Ошибка в коде! Вы получили ${damage} урона от заклинания!`);
+            updateHpUI();
+
+            if (gameState.playerHp <= 0) {
+                setTimeout(() => {
+                    alert('Ваш герой пал в бою с багами! Начнем сначала...');
+                    restartGame();
+                }, 800);
+            }
+        }
+
+        function resetCurrentTask() {
+            loadTask(gameState.stage);
+        }
+
+        function updateHpUI() {
+            const task = TASKS[gameState.stage];
+
+            // Player HP
+            const hpPercent = (gameState.playerHp / gameState.maxPlayerHp) * 100;
+            document.getElementById('hp-bar').style.width = `${hpPercent}%`;
+            document.getElementById('hp-text').innerText = `${gameState.playerHp}/${gameState.maxPlayerHp}`;
+
+            // Player Mana / XP
+            document.getElementById('mana-bar').style.width = `${gameState.playerMana}%`;
+            document.getElementById('mana-text').innerText = `${gameState.playerMana}/100 XP`;
+
+            // Enemy HP
+            if (task) {
+                const enemyHpPercent = (gameState.enemyHp / gameState.maxEnemyHp) * 100;
+                document.getElementById('enemy-hp-bar').style.width = `${enemyHpPercent}%`;
+                document.getElementById('enemy-hp-text').innerText = `${gameState.enemyHp}/${gameState.maxEnemyHp} HP`;
+            }
+        }
+
+        function logCombat(msg) {
+            const log = document.getElementById('combat-log');
+            log.innerHTML = `<div>${msg}</div>` + log.innerHTML;
+        }
+
+        /* ==========================================================================
+           6. MODALS & ENDGAME
+           ========================================================================== */
+        function openSpellbook() {
+            document.getElementById('spellbook-modal').classList.remove('hidden');
+        }
+
+        function closeSpellbook() {
+            document.getElementById('spellbook-modal').classList.add('hidden');
+        }
+
+        function showVictory() {
+            audio.playVictory();
+            document.getElementById('endgame-modal').classList.remove('hidden');
+        }
+
+        function restartGame() {
+            gameState.playerHp = 100;
+            gameState.playerMana = 0;
+            document.getElementById('endgame-modal').classList.add('hidden');
+            loadTask(0);
+        }
+
+        // Initialize Game on Load
+        window.onload = () => {
+            initGame();
+        };
+    </script>
+</body>
+</html>
